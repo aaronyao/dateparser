@@ -1,6 +1,6 @@
 """
 复合相对日期解析器
-支持多语言的复合相对日期表达，如"上周五"、"last friday"、"next monday"等
+支持多语言的复合相对日期表达，如"上周五"、"last friday"、"next monday"、"上个月十七号"、"last month 17th"等
 """
 
 import re
@@ -15,52 +15,68 @@ class CompoundRelativeParser:
         # 定义各语言的模式和映射
         self.language_patterns = {
             'zh': {
-                'pattern': re.compile(r'(上|下|本|这)周([一二三四五六日天])'),
+                'week_pattern': re.compile(r'(上|下|本|这)周([一二三四五六日天])'),
+                'month_pattern': re.compile(r'(上|下|本|这)(?:个)?月([一二三四五六七八九十]+|[0-9]+)(?:号|日)'),
                 'relative_map': {'上': -1, '下': 1, '本': 0, '这': 0},
-                'weekday_map': {'一': 0, '二': 1, '三': 2, '四': 3, '五': 4, '六': 5, '日': 6, '天': 6}
+                'weekday_map': {'一': 0, '二': 1, '三': 2, '四': 3, '五': 4, '六': 5, '日': 6, '天': 6},
+                'number_map': {
+                    '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '十': 10,
+                    '十一': 11, '十二': 12, '十三': 13, '十四': 14, '十五': 15, '十六': 16, '十七': 17, '十八': 18, 
+                    '十九': 19, '二十': 20, '二十一': 21, '二十二': 22, '二十三': 23, '二十四': 24, '二十五': 25,
+                    '二十六': 26, '二十七': 27, '二十八': 28, '二十九': 29, '三十': 30, '三十一': 31
+                }
             },
             'en': {
-                'pattern': re.compile(r'(last|next|this)\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)', re.IGNORECASE),
+                'week_pattern': re.compile(r'(last|next|this)\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)', re.IGNORECASE),
+                'month_pattern': re.compile(r'(last|next|this)\s+month\s+(\d{1,2})(?:st|nd|rd|th)?', re.IGNORECASE),
                 'relative_map': {'last': -1, 'next': 1, 'this': 0},
                 'weekday_map': {'monday': 0, 'tuesday': 1, 'wednesday': 2, 'thursday': 3, 'friday': 4, 'saturday': 5, 'sunday': 6}
             },
             'es': {
-                'pattern': re.compile(r'(pasado|próximo|este)\s+(lunes|martes|miércoles|jueves|viernes|sábado|domingo)', re.IGNORECASE),
+                'week_pattern': re.compile(r'(pasado|próximo|este)\s+(lunes|martes|miércoles|jueves|viernes|sábado|domingo)', re.IGNORECASE),
+                'month_pattern': re.compile(r'(pasado|próximo|este)\s+mes\s+(\d{1,2})', re.IGNORECASE),
                 'relative_map': {'pasado': -1, 'próximo': 1, 'este': 0},
                 'weekday_map': {'lunes': 0, 'martes': 1, 'miércoles': 2, 'jueves': 3, 'viernes': 4, 'sábado': 5, 'domingo': 6}
             },
             'fr': {
-                'pattern': re.compile(r'(dernier|prochain|ce)\s+(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)', re.IGNORECASE),
+                'week_pattern': re.compile(r'(dernier|prochain|ce)\s+(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)', re.IGNORECASE),
+                'month_pattern': re.compile(r'(dernier|prochain|ce)\s+mois\s+(\d{1,2})', re.IGNORECASE),
                 'relative_map': {'dernier': -1, 'prochain': 1, 'ce': 0},
                 'weekday_map': {'lundi': 0, 'mardi': 1, 'mercredi': 2, 'jeudi': 3, 'vendredi': 4, 'samedi': 5, 'dimanche': 6}
             },
             'de': {
-                'pattern': re.compile(r'(letzten|nächsten|diesen)\s+(montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)', re.IGNORECASE),
+                'week_pattern': re.compile(r'(letzten|nächsten|diesen)\s+(montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)', re.IGNORECASE),
+                'month_pattern': re.compile(r'(letzten|nächsten|diesen)\s+monat\s+(\d{1,2})', re.IGNORECASE),
                 'relative_map': {'letzten': -1, 'nächsten': 1, 'diesen': 0},
                 'weekday_map': {'montag': 0, 'dienstag': 1, 'mittwoch': 2, 'donnerstag': 3, 'freitag': 4, 'samstag': 5, 'sonntag': 6}
             },
             'ja': {
-                'pattern': re.compile(r'(先|来|今)週の?(月|火|水|木|金|土|日)曜日?'),
+                'week_pattern': re.compile(r'(先|来|今)週の?(月|火|水|木|金|土|日)曜日?'),
+                'month_pattern': re.compile(r'(先|来|今)月(\d{1,2})日'),
                 'relative_map': {'先': -1, '来': 1, '今': 0},
                 'weekday_map': {'月': 0, '火': 1, '水': 2, '木': 3, '金': 4, '土': 5, '日': 6}
             },
             'ru': {
-                'pattern': re.compile(r'(прошлый|следующий|этот)\s+(понедельник|вторник|среда|четверг|пятница|суббота|воскресенье)', re.IGNORECASE),
+                'week_pattern': re.compile(r'(прошлый|следующий|этот)\s+(понедельник|вторник|среда|четверг|пятница|суббота|воскресенье)', re.IGNORECASE),
+                'month_pattern': re.compile(r'(прошлый|следующий|этот)\s+месяц\s+(\d{1,2})', re.IGNORECASE),
                 'relative_map': {'прошлый': -1, 'следующий': 1, 'этот': 0},
                 'weekday_map': {'понедельник': 0, 'вторник': 1, 'среда': 2, 'четверг': 3, 'пятница': 4, 'суббота': 5, 'воскресенье': 6}
             },
             'it': {
-                'pattern': re.compile(r'(scorso|prossimo|questo)\s+(lunedì|martedì|mercoledì|giovedì|venerdì|sabato|domenica)', re.IGNORECASE),
+                'week_pattern': re.compile(r'(scorso|prossimo|questo)\s+(lunedì|martedì|mercoledì|giovedì|venerdì|sabato|domenica)', re.IGNORECASE),
+                'month_pattern': re.compile(r'(scorso|prossimo|questo)\s+mese\s+(\d{1,2})', re.IGNORECASE),
                 'relative_map': {'scorso': -1, 'prossimo': 1, 'questo': 0},
                 'weekday_map': {'lunedì': 0, 'martedì': 1, 'mercoledì': 2, 'giovedì': 3, 'venerdì': 4, 'sabato': 5, 'domenica': 6}
             },
             'pt': {
-                'pattern': re.compile(r'(passado|próximo|este)\s+(segunda|terça|quarta|quinta|sexta|sábado|domingo)', re.IGNORECASE),
+                'week_pattern': re.compile(r'(passado|próximo|este)\s+(segunda|terça|quarta|quinta|sexta|sábado|domingo)', re.IGNORECASE),
+                'month_pattern': re.compile(r'(passado|próximo|este)\s+mês\s+(\d{1,2})', re.IGNORECASE),
                 'relative_map': {'passado': -1, 'próximo': 1, 'este': 0},
                 'weekday_map': {'segunda': 0, 'terça': 1, 'quarta': 2, 'quinta': 3, 'sexta': 4, 'sábado': 5, 'domingo': 6}
             },
             'ko': {
-                'pattern': re.compile(r'(지난|다음|이번)\s*주?\s*(월|화|수|목|금|토|일)요일'),
+                'week_pattern': re.compile(r'(지난|다음|이번)\s*주?\s*(월|화|수|목|금|토|일)요일'),
+                'month_pattern': re.compile(r'(지난|다음|이번)\s*달\s*(\d{1,2})일'),
                 'relative_map': {'지난': -1, '다음': 1, '이번': 0},
                 'weekday_map': {'월': 0, '화': 1, '수': 2, '목': 3, '금': 4, '토': 5, '일': 6}
             }
@@ -123,27 +139,110 @@ class CompoundRelativeParser:
             return None
             
         lang_config = self.language_patterns[lang_key]
-        pattern = lang_config['pattern']
         relative_map = lang_config['relative_map']
-        weekday_map = lang_config['weekday_map']
         
-        match = pattern.match(date_string.strip())
-        if not match:
-            return None
+        # 首先尝试匹配月份+日期模式
+        if 'month_pattern' in lang_config:
+            month_pattern = lang_config['month_pattern']
+            match = month_pattern.match(date_string.strip())
+            if match:
+                relative_indicator = match.group(1).lower()
+                day_str = match.group(2)
+                
+                # 获取相对月数
+                month_offset = relative_map.get(relative_indicator)
+                if month_offset is None:
+                    return None
+                
+                # 解析日期数字
+                day = self._parse_day_number(day_str, lang_key)
+                if day is None or day < 1 or day > 31:
+                    return None
+                    
+                # 计算目标月份日期
+                return self._calculate_month_date(base_time, month_offset, day)
+        
+        # 然后尝试匹配星期模式
+        week_pattern = lang_config.get('week_pattern') or lang_config.get('pattern')
+        if week_pattern:
+            weekday_map = lang_config['weekday_map']
             
-        relative_indicator = match.group(1).lower()
-        weekday_name = match.group(2).lower()
-        
-        # 获取相对周数和目标星期
-        week_offset = relative_map.get(relative_indicator)
-        target_weekday = weekday_map.get(weekday_name)
-        
-        if week_offset is None or target_weekday is None:
-            return None
+            match = week_pattern.match(date_string.strip())
+            if not match:
+                return None
+                
+            relative_indicator = match.group(1).lower()
+            weekday_name = match.group(2).lower()
             
-        # 计算目标日期
-        return self._calculate_target_date(base_time, week_offset, target_weekday)
+            # 获取相对周数和目标星期
+            week_offset = relative_map.get(relative_indicator)
+            target_weekday = weekday_map.get(weekday_name)
+            
+            if week_offset is None or target_weekday is None:
+                return None
+                
+            # 计算目标日期
+            return self._calculate_target_date(base_time, week_offset, target_weekday)
+        
+        return None
     
+    def _parse_day_number(self, day_str, lang_key):
+        """
+        解析日期数字，支持中文数字和阿拉伯数字
+        
+        Args:
+            day_str: 日期字符串
+            lang_key: 语言键
+            
+        Returns:
+            int: 日期数字，失败返回None
+        """
+        # 尝试直接解析阿拉伯数字
+        try:
+            return int(day_str)
+        except ValueError:
+            pass
+        
+        # 对于中文，尝试从number_map解析
+        if lang_key == 'zh' and 'number_map' in self.language_patterns[lang_key]:
+            number_map = self.language_patterns[lang_key]['number_map']
+            return number_map.get(day_str)
+        
+        return None
+
+    def _calculate_month_date(self, base_time, month_offset, day):
+        """
+        计算目标月份的指定日期
+        
+        Args:
+            base_time: 基准时间
+            month_offset: 月份偏移量（-1=上月, 0=本月, 1=下月）
+            day: 目标日期
+            
+        Returns:
+            datetime对象
+        """
+        try:
+            # 计算目标月份
+            target_date = base_time + relativedelta(months=month_offset)
+            
+            # 设置目标日期，保持原有的时分秒
+            target_date = target_date.replace(day=day)
+            
+            return target_date
+        except ValueError:
+            # 处理无效日期（如2月31日）
+            # 尝试设置为该月的最后一天
+            try:
+                target_date = base_time + relativedelta(months=month_offset)
+                target_date = target_date.replace(day=1) + relativedelta(months=1) - timedelta(days=1)
+                # 如果目标日期小于等于该月最后一天，使用目标日期
+                if day <= target_date.day:
+                    target_date = target_date.replace(day=day)
+                return target_date
+            except:
+                return None
+
     def _calculate_target_date(self, base_time, week_offset, target_weekday):
         """
         计算目标日期
@@ -175,11 +274,25 @@ class CompoundRelativeParser:
         if language:
             lang_key = self._get_language_key(language)
             if lang_key and lang_key in self.language_patterns:
-                return bool(self.language_patterns[lang_key]['pattern'].match(date_string.strip()))
+                lang_config = self.language_patterns[lang_key]
+                # 检查月份模式
+                if 'month_pattern' in lang_config and lang_config['month_pattern'].match(date_string.strip()):
+                    return True
+                # 检查星期模式
+                week_pattern = lang_config.get('week_pattern') or lang_config.get('pattern')
+                if week_pattern and week_pattern.match(date_string.strip()):
+                    return True
+                return False
         
         # 尝试所有支持的语言
         for lang_key in self.language_patterns:
-            if self.language_patterns[lang_key]['pattern'].match(date_string.strip()):
+            lang_config = self.language_patterns[lang_key]
+            # 检查月份模式
+            if 'month_pattern' in lang_config and lang_config['month_pattern'].match(date_string.strip()):
+                return True
+            # 检查星期模式
+            week_pattern = lang_config.get('week_pattern') or lang_config.get('pattern')
+            if week_pattern and week_pattern.match(date_string.strip()):
                 return True
                 
         return False
@@ -211,26 +324,31 @@ if __name__ == "__main__":
     base_time = datetime(2024, 1, 15, 10, 0, 0)  # 2024年1月15日(星期一)
     
     test_cases = [
-        # 中文
+        # 中文 - 星期
         ('上周五', 'zh'), ('下周三', 'zh'), ('本周二', 'zh'),
-        # 英文
+        # 中文 - 月份+日期
+        ('上个月十七号', 'zh'), ('上个月17号', 'zh'), ('上月十七号', 'zh'), 
+        ('下月二十二号', 'zh'), ('下个月二十二号', 'zh'),
+        # 英文 - 星期
         ('last friday', 'en'), ('next monday', 'en'), ('this wednesday', 'en'),
+        # 英文 - 月份+日期
+        ('last month 17th', 'en'), ('next month 22nd', 'en'), ('this month 15th', 'en'),
         # 西班牙文
-        ('pasado viernes', 'es'), ('próximo lunes', 'es'),
+        ('pasado viernes', 'es'), ('próximo lunes', 'es'), ('pasado mes 17', 'es'),
         # 法文
-        ('dernier vendredi', 'fr'), ('prochain lundi', 'fr'),
+        ('dernier vendredi', 'fr'), ('prochain lundi', 'fr'), ('dernier mois 17', 'fr'),
         # 德文
-        ('letzten freitag', 'de'), ('nächsten montag', 'de'),
+        ('letzten freitag', 'de'), ('nächsten montag', 'de'), ('letzten monat 17', 'de'),
         # 意大利文
-        ('scorso venerdì', 'it'), ('prossimo lunedì', 'it'),
+        ('scorso venerdì', 'it'), ('prossimo lunedì', 'it'), ('scorso mese 17', 'it'),
         # 葡萄牙文
-        ('passado sexta', 'pt'), ('próximo segunda', 'pt'),
+        ('passado sexta', 'pt'), ('próximo segunda', 'pt'), ('passado mês 17', 'pt'),
         # 俄文
-        ('прошлый пятница', 'ru'), ('следующий понедельник', 'ru'),
+        ('прошлый пятница', 'ru'), ('следующий понедельник', 'ru'), ('прошлый месяц 17', 'ru'),
         # 日文
-        ('先週の金曜日', 'ja'), ('来週の月曜日', 'ja'),
+        ('先週の金曜日', 'ja'), ('来週の月曜日', 'ja'), ('先月17日', 'ja'),
         # 韩文
-        ('지난 주 금요일', 'ko'), ('다음 주 월요일', 'ko'),
+        ('지난 주 금요일', 'ko'), ('다음 주 월요일', 'ko'), ('지난 달 17일', 'ko'),
     ]
     
     print('复合相对日期解析器测试:')
