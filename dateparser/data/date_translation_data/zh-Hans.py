@@ -157,7 +157,7 @@ info = {
         "2 day ago": [
             "前天"
         ],
-        "in 2 days": [
+        "in 2 day": [
             "后天"
         ]
     },
@@ -236,5 +236,6 @@ info = {
         "]",
         "|",
         "，"
-    ]
+    ],
+    "simplifications": []
 }

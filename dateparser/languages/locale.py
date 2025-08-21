@@ -64,6 +64,11 @@ class Locale:
         if strip_timezone:
             date_string, _ = pop_tz_offset_from_string(date_string, as_offset=False)
 
+        # 检查是否是复合相对日期表达
+        from dateparser.compound_relative_parser import compound_relative_parser
+        if compound_relative_parser.is_applicable(date_string, self.shortname):
+            return True
+
         date_string = self._translate_numerals(date_string)
         if settings.NORMALIZE:
             date_string = normalize_unicode(date_string)

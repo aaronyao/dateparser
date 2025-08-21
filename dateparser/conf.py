@@ -130,6 +130,7 @@ def _check_parsers(setting_name, setting_value):
     """Returns `True` if the provided list of parsers contains valid values"""
     existing_parsers = [
         "timestamp",
+        "compound-relative",
         "relative-time",
         "custom-formats",
         "absolute-time",

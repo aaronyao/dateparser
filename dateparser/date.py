@@ -13,6 +13,7 @@ from dateparser.freshness_date_parser import freshness_date_parser
 from dateparser.languages.loader import LocaleDataLoader
 from dateparser.parser import _parse_absolute, _parse_nospaces
 from dateparser.timezone_parser import pop_tz_offset_from_string
+from dateparser.compound_relative_parser import compound_relative_parser
 from dateparser.utils import (
     apply_timezone_from_settings,
     get_timezone_from_tz_string,
@@ -226,6 +227,7 @@ class _DateLocaleParser:
         self._parsers = {
             "timestamp": self._try_timestamp,
             "negative-timestamp": self._try_negative_timestamp,
+            "compound-relative": self._try_compound_relative_parser,
             "relative-time": self._try_freshness_parser,
             "custom-formats": self._try_given_formats,
             "absolute-time": self._try_absolute_parser,
@@ -258,6 +260,21 @@ class _DateLocaleParser:
 
     def _try_negative_timestamp(self):
         return self._try_timestamp_parser(negative=True)
+
+    def _try_compound_relative_parser(self):
+        # 尝试复合相对日期解析（支持多语言）
+        if compound_relative_parser.is_applicable(self.date_string, self.locale.shortname):
+            try:
+                base_time = self._settings.RELATIVE_BASE or datetime.now()
+                date_obj = compound_relative_parser.parse(self.date_string, base_time, self.locale.shortname)
+                if date_obj:
+                    return DateData(
+                        date_obj=date_obj,
+                        period="day"
+                    )
+            except (OverflowError, ValueError):
+                pass
+        return None
 
     def _try_freshness_parser(self):
         try:

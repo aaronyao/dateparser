@@ -1,5 +1,6 @@
 default_parsers = [
     "timestamp",
+    "compound-relative",
     "relative-time",
     "custom-formats",
     "absolute-time",
