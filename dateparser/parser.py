@@ -482,6 +482,19 @@ class _parser:
     def _correct_for_time_frame(self, dateobj, tz):
         days = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 
+        # Fix hardcoded year from Chinese translation data and apply PREFER_DATES_FROM logic
+        if dateobj.year == self.now.year and self.month and (not self.year or dateobj.year == self.now.year):
+            # This date was translated from a format like "8月15日" without explicit year
+            # Apply PREFER_DATES_FROM logic
+            if self.now < dateobj:
+                # Date is in the future this year
+                if self.settings.PREFER_DATES_FROM == "past":
+                    dateobj = dateobj.replace(year=dateobj.year - 1)
+            else:
+                # Date has passed this year
+                if self.settings.PREFER_DATES_FROM == "future":
+                    dateobj = dateobj.replace(year=dateobj.year + 1)
+
         token_weekday, _ = getattr(self, "_token_weekday", (None, None))
 
         if token_weekday and not (
